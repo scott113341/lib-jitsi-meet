@@ -281,5 +281,117 @@ describe('ChatRoom', () => {
         });
 
     });
-});
 
+    describe('sendMessage', () => {
+        let emitterSpy, room, sendSpy;
+
+        // Regex to strip leading whitespace/newlines on multi-line strings
+        const STRIP_RE = /^\s+|\n/gm;
+
+        beforeEach(() => {
+            const connection = {
+                send: () => null
+            };
+            const xmpp = {
+                options: {}
+            };
+
+            room = new ChatRoom(
+                connection,
+                'jid',
+                'password',
+                xmpp,
+                {} /* options */
+            );
+
+            sendSpy = spyOn(room.connection, 'send');
+            emitterSpy = spyOn(room.eventEmitter, 'emit');
+        });
+
+        it('sends a message with a body', () => {
+            room.sendMessage('Hello', 'body', undefined);
+
+            const readableMessageStr = `
+                <message to="jid" type="groupchat" xmlns="jabber:client">
+                    <body>Hello</body>
+                </message>
+            `;
+            const messageStr = readableMessageStr.replace(STRIP_RE, '');
+
+            expect(sendSpy.calls.count()).toEqual(1);
+            expect(sendSpy.calls.argsFor(0).length).toEqual(1);
+            expect(sendSpy.calls.argsFor(0)[0].toString()).toEqual(messageStr);
+
+            expect(emitterSpy.calls.count()).toEqual(1);
+            expect(emitterSpy.calls.argsFor(0)).toEqual([
+                XMPPEvents.SENDING_CHAT_MESSAGE,
+                'Hello'
+            ]);
+        });
+
+        it('sends a message with a body + nick', () => {
+            room.sendMessage('Hello', 'body', 'Nicky');
+
+            const readableMessageStr = `
+                <message to="jid" type="groupchat" xmlns="jabber:client">
+                    <body>Hello</body>
+                    <nick xmlns="http://jabber.org/protocol/nick">Nicky</nick>
+                </message>
+            `;
+            const messageStr = readableMessageStr.replace(STRIP_RE, '');
+
+            expect(sendSpy.calls.count()).toEqual(1);
+            expect(sendSpy.calls.argsFor(0).length).toEqual(1);
+            expect(sendSpy.calls.argsFor(0)[0].toString()).toEqual(messageStr);
+
+            expect(emitterSpy.calls.count()).toEqual(1);
+            expect(emitterSpy.calls.argsFor(0)).toEqual([
+                XMPPEvents.SENDING_CHAT_MESSAGE,
+                'Hello'
+            ]);
+        });
+
+        it('sends a message with a json-message', () => {
+            room.sendMessage('{"works":true}', 'json-message', undefined);
+
+            const readableMessageStr = `
+                <message to="jid" type="groupchat" xmlns="jabber:client">
+                    <json-message xmlns="http://jitsi.org/jitmeet">{&quot;works&quot;:true}</json-message>
+                </message>
+            `;
+            const messageStr = readableMessageStr.replace(STRIP_RE, '');
+
+            expect(sendSpy.calls.count()).toEqual(1);
+            expect(sendSpy.calls.argsFor(0).length).toEqual(1);
+            expect(sendSpy.calls.argsFor(0)[0].toString()).toEqual(messageStr);
+
+            expect(emitterSpy.calls.count()).toEqual(1);
+            expect(emitterSpy.calls.argsFor(0)).toEqual([
+                XMPPEvents.SENDING_CHAT_MESSAGE,
+                '{"works":true}'
+            ]);
+        });
+
+        it('sends a message with a json-message + nick', () => {
+            room.sendMessage('{"works":true}', 'json-message', 'Nicky');
+
+            const readableMessageStr = `
+                <message to="jid" type="groupchat" xmlns="jabber:client">
+                    <json-message xmlns="http://jitsi.org/jitmeet">{&quot;works&quot;:true}</json-message>
+                    <nick xmlns="http://jabber.org/protocol/nick">Nicky</nick>
+                </message>
+            `;
+            const messageStr = readableMessageStr.replace(STRIP_RE, '');
+
+            expect(sendSpy.calls.count()).toEqual(1);
+            expect(sendSpy.calls.argsFor(0).length).toEqual(1);
+            expect(sendSpy.calls.argsFor(0)[0].toString()).toEqual(messageStr);
+
+            expect(emitterSpy.calls.count()).toEqual(1);
+            expect(emitterSpy.calls.argsFor(0)).toEqual([
+                XMPPEvents.SENDING_CHAT_MESSAGE,
+                '{"works":true}'
+            ]);
+        });
+    });
+});
